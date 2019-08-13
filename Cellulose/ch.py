@@ -15,7 +15,7 @@ from selenium.common.exceptions import NoSuchElementException
 from bs4 import BeautifulSoup
 
 
-# In[3]:
+# In[2]:
 
 
 def hostedBySNU():
@@ -37,7 +37,7 @@ def hostedBySNU():
     return driver
 
 
-# In[4]:
+# In[3]:
 
 
 def getArticleListPage(year_cnt, month_cnt, article_cnt, driver):
@@ -66,7 +66,7 @@ def getArticleListPage(year_cnt, month_cnt, article_cnt, driver):
     return driver, True
 
 
-# In[5]:
+# In[4]:
 
 
 def getArticle(num, driver):
@@ -88,6 +88,13 @@ def getArticle(num, driver):
     html = driver.page_source
     soup = BeautifulSoup(html, 'html.parser')
     return driver, soup, True
+
+
+# In[6]:
+
+
+keywordList = []
+data = []
 
 
 # In[7]:
@@ -136,7 +143,7 @@ for year_cnt in range(26, 0, -1):
     driver.close()
 
 
-# In[59]:
+# In[8]:
 
 
 sorted_key, counted_key  = np.unique(keywordList, return_counts = True)
@@ -153,9 +160,4 @@ df.to_csv("cellulose_ALL.csv", index = False, encoding='utf-8-sig')
 df_raw_keyWord = pd.DataFrame(keywordList)
 df_raw_keyWord.to_csv("keyword_ALL_raw.csv", index = False,  encoding='utf-8-sig')
 
-
-# In[ ]:
-
-
-driver.close()
 
