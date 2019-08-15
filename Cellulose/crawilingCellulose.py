@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[1]:
+# In[ ]:
 
 
 import numpy as np
@@ -14,105 +14,70 @@ from selenium.common.exceptions import TimeoutException
 from selenium.common.exceptions import NoSuchElementException
 from bs4 import BeautifulSoup
 
-
-# In[2]:
-
-
 def hostedBySNU():
-    path = "./firefoxdriver.exe"
+    # headless mode
     options = webdriver.FirefoxOptions()
     options.add_argument("--headless")
-    driver = webdriver.Firefox(options=options, executable_path="@firefox driver path@")
+    driver = webdriver.Firefox(options=options, executable_path="@geckodriver_path@")
+    #
+    # without headless
+    # driver = webdriver.Firefox(executable_path="@geckodriver_path@")
+    #
     # Login
     driver.get('https://lib.snu.ac.kr/user/login')
     # SNU Id
-    driver.find_element_by_name('si_id').send_keys('@userID@')
+    driver.find_element_by_name('si_id').send_keys('@mySNU_ID@')
     # SNU Password
-    driver.find_element_by_name('si_pwd').send_keys('@userPASSWORD@')
+    driver.find_element_by_name('si_pwd').send_keys('@mySNU_password@')
     driver.find_element_by_xpath('//*[@id="snu-login-block-form"]/div//*[@id="edit-actions"]/input').click()
-    time.sleep(2)
-    # Find Link and get redirected page, get from html
-    driver.get("@hosting URL@")
-    time.sleep(2)
+    time.sleep(5)
+    # Find Link and get redirected page
+    driver.get("https://ap01-a.alma.exlibrisgroup.com/view/action/uresolver.do?operation=resolveService&package_service_id=13703864020002591&institutionId=2591&customerId=2590")
+    time.sleep(5)
     return driver
-
-
-# In[3]:
-
 
 def getArticleListPage(year_cnt, month_cnt, article_cnt, driver):
     try:
         if(article_cnt<20):
             driver.get(journal_list_links + "/" + str(year_cnt) + "/" + str(month_cnt))
-        elif(article_cnt >= 20 and article_cnt < 40):
-            driver.get(journal_list_links + "/" + str(year_cnt) + "/" + str(month_cnt) + "/page/2")
-        elif(article_cnt >= 40 and article_cnt < 60):
-            driver.get(journal_list_links + "/" + str(year_cnt) + "/" + str(month_cnt) + "/page/3")
-        elif(article_cnt >= 60 and article_cnt < 80):
-            driver.get(journal_list_links + "/" + str(year_cnt) + "/" + str(month_cnt) + "/page/4")
-        elif(article_cnt >= 80 and article_cnt < 100):
-            driver.get(journal_list_links + "/" + str(year_cnt) + "/" + str(month_cnt) + "/page/5")
-        elif(article_cnt >= 10 and article_cnt < 120):
-            driver.get(journal_list_links + "/" + str(year_cnt) + "/" + str(month_cnt) + "/page/6")
-    except TimeoutException as ex:
+        else:
+            driver.get(journal_list_links + "/" + str(year_cnt) + "/" + str(month_cnt) + "/page/" + str(1 + int(article_cnt/20)))
+    except:
         driver.close()
         driver = hostedBySNU()
         return driver, False
-    except NoSuchElementException as ex2:
-        driver.close()
-        driver = hostedBySNU()
-        return driver, False
-    time.sleep(1.5)
+    time.sleep(2)
     return driver, True
-
-
-# In[4]:
-
 
 def getArticle(num, driver):
     try:
         driver.find_element_by_xpath('//div[contains(@class, "toc")]/ol/li[' + str(art_num) + ']/div/h3/a').click()
-    except TimeoutException as ex:
-        driver.close()
-        driver = hostedBySNU()
-        return driver, None, False
-    except NoSuchElementException as ex2:
-        driver.close()
-        driver = hostedBySNU()
-        return driver, None, False
     except:
         driver.close()
         driver = hostedBySNU()
         return driver, None, False
-    time.sleep(1.5)
+    time.sleep(2)
     html = driver.page_source
     soup = BeautifulSoup(html, 'html.parser')
     return driver, soup, True
 
 
-# In[6]:
 
-
+# data container
 keywordList = []
 data = []
-
-
-# In[7]:
-
-
 # Crawler Loop
 journal_list_links = "http://lps3.link.springer.com.libproxy.snu.ac.kr/journal/10570"
-for year_cnt in range(26, 0, -1):
+for year_cnt in range(26, 0, -1):#94 to 19
     driver = hostedBySNU()
-    time.sleep(1.5)
-    for month_cnt in range(13, 0, -1):
+    for month_cnt in range(13, 0, -1):# Vol 1 ~ 12
         success = False
         while(not success):
             driver, success = getArticleListPage(year_cnt, month_cnt, 0, driver)
         article_list_html = driver.page_source
         article_list_soup = BeautifulSoup(article_list_html, 'html.parser')
         article_num = int(article_list_soup.select('#kb-nav--main > div.toc > h2 > span')[0].text.strip()[1:3])
-        for article_cnt in range(0, article_num):
+        for article_cnt in range(0, article_num): # get each article
             success = False
             while(not success):
                 driver, success = getArticleListPage(year_cnt, month_cnt, article_cnt, driver)
@@ -120,6 +85,8 @@ for year_cnt in range(26, 0, -1):
             success = False
             while(not success):
                 driver, soup, success = getArticle(art_num, driver)
+            # title, published year, keyword, abstract, etc..
+            # fill below if need
             temp_data = []
             pub_year = soup.select('p.icon--meta-keyline')
             title = soup.select('h1.ArticleTitle')
@@ -139,25 +106,28 @@ for year_cnt in range(26, 0, -1):
                 temp_data.append(x.text.strip())
                 keywordList.append(x.text.strip())
             data.append(temp_data)
-    keywordList.append(str(year_cnt-7) + "years end")
+    # division
+    keywordList.append(str(year_cnt-7) + " years end")
     driver.close()
 
 
-# In[8]:
+# save file
+df = pd.DataFrame(data)
+r, c = df.shape
+header = ["published", "Title"] + ["keyword" + str(x) for x in range(1, c-2)]
+df.to_csv("cellulose_ALL.csv", index = False, encoding='utf-8-sig')
+
+df_raw_keyWord = pd.DataFrame(keywordList)
+df_raw_keyWord.to_csv("keyword_ALL_raw.csv", index = False,  encoding='utf-8-sig')
 
 
+# Process Keyword
+keywordList = pd.read_csv("keyword_ALL_raw.csv", index_col = None)
+# check frequency
 sorted_key, counted_key  = np.unique(keywordList, return_counts = True)
 sorted_key = sorted_key.reshape(len(sorted_key), 1)
 counted_key = counted_key.reshape(len(counted_key), 1)
 keyWord = np.concatenate((sorted_key, counted_key), axis = 1)
 df_keyWord = pd.DataFrame(keyWord)
 df_keyWord.to_csv("keyword_ALL.csv", header = ["keyword", "frequency"], index = False, encoding='utf-8-sig')
-
-df = pd.DataFrame(data)
-r, c = df.shape
-df.to_csv("cellulose_ALL.csv", index = False, encoding='utf-8-sig')
-
-df_raw_keyWord = pd.DataFrame(keywordList)
-df_raw_keyWord.to_csv("keyword_ALL_raw.csv", index = False,  encoding='utf-8-sig')
-
 
