@@ -34,12 +34,12 @@ def hostedBySNU():
     time.sleep(5)
     return driver
 
-def getArticleListPage(year_cnt, month_cnt, article_cnt, driver):
+def getPaperListPage(year_cnt, month_cnt, paper_cnt, driver):
     try:
-        if(article_cnt<20):
+        if(paper_cnt<20):
             driver.get(journal_list_links + "/" + str(year_cnt) + "/" + str(month_cnt))
         else:
-            driver.get(journal_list_links + "/" + str(year_cnt) + "/" + str(month_cnt) + "/page/" + str(1 + int(article_cnt/20)))
+            driver.get(journal_list_links + "/" + str(year_cnt) + "/" + str(month_cnt) + "/page/" + str(1 + int(paper_cnt/20)))
     except:
         driver.close()
         driver = hostedBySNU()
@@ -47,7 +47,7 @@ def getArticleListPage(year_cnt, month_cnt, article_cnt, driver):
     time.sleep(2)
     return driver, True
 
-def getArticle(num, driver):
+def getPaper(num, driver):
     try:
         driver.find_element_by_xpath('//div[contains(@class, "toc")]/ol/li[' + str(art_num) + ']/div/h3/a').click()
     except:
@@ -71,18 +71,18 @@ for year_cnt in range(26, 0, -1):#94 to 19
     for month_cnt in range(13, 0, -1):# Vol 1 ~ 12
         success = False
         while(not success):
-            driver, success = getArticleListPage(year_cnt, month_cnt, 0, driver)
-        article_list_html = driver.page_source
-        article_list_soup = BeautifulSoup(article_list_html, 'html.parser')
-        article_num = int(article_list_soup.select('#kb-nav--main > div.toc > h2 > span')[0].text.strip()[1:3])
-        for article_cnt in range(0, article_num): # get each article
+            driver, success = getPaperListPage(year_cnt, month_cnt, 0, driver)
+        paper_list_html = driver.page_source
+        paper_list_soup = BeautifulSoup(paper_list_html, 'html.parser')
+        paper_num = int(paper_list_soup.select('#kb-nav--main > div.toc > h2 > span')[0].text.strip()[1:3])
+        for paper_cnt in range(0, paper_num): # get each paper
             success = False
             while(not success):
-                driver, success = getArticleListPage(year_cnt, month_cnt, article_cnt, driver)
-            art_num = article_cnt % 20 + 1
+                driver, success = getPaperListPage(year_cnt, month_cnt, paper_cnt, driver)
+            art_num = paper_cnt % 20 + 1
             success = False
             while(not success):
-                driver, soup, success = getArticle(art_num, driver)
+                driver, soup, success = getPaper(art_num, driver)
             # title, published year, keyword, abstract, etc..
             # fill below if need
             temp_data = []
@@ -99,7 +99,7 @@ for year_cnt in range(26, 0, -1):#94 to 19
                 temp_data.append(pub_year_str[:cnt])
             for x in title:
                 temp_data.append(x.text.strip())
-                print(str(year_cnt-7) + " " + str(month_cnt) + " " + str(article_cnt))
+                print(str(year_cnt-7) + " " + str(month_cnt) + " " + str(paper_cnt))
             for x in keyword:
                 temp_data.append(x.text.strip())
                 keywordList.append(x.text.strip())
